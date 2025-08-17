@@ -213,6 +213,6 @@ __marimo__/
 artifacts/
 mlruns/
 .DS_Store
-*.csv
+
 *.json
 cache/
