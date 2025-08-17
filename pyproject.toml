@@ -1,0 +1,31 @@
+[project]
+name = "nlp_case"
+version = "0.1.0"
+description = "MVP de triagem inteligente com LLMs (resumo e classificação de chamados)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+  { name = "Vitor Hugo", email = "xyvieira@gmail.com" }
+]
+requires-python = ">=3.9"
+dependencies = [
+  "pandas==2.3.1",
+  "gradio==5.42.0",
+  "torch",                      
+  "transformers>=4.55.0",
+  "accelerate",
+  "sentencepiece", 
+  "safetensors",
+  "loguru",
+  "torchvision",
+  "torchaudio",
+  "chardet",
+  "protobuf<4,>=3.20.3"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling", "wheel", "hatch-requirements-txt"]
+build-backend = "hatchling.build"
