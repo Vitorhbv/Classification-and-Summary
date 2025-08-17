@@ -1,8 +1,8 @@
-from .csv_tools import parse_labels, _read_csv_smart, process_text_single, process_csv
+from .csv_tools import _read_csv_smart, parse_labels, process_csv, process_text_single
 
 __all__ = [
-    "parse_labels",
     "_read_csv_smart",
-    "process_text_single",
+    "parse_labels",
     "process_csv",
+    "process_text_single",
 ]

@@ -1,15 +1,17 @@
 """Funções utilitárias para manipulação de CSVs e processamento de texto."""
 
-import pandas as pd
-from typing import List, Union, Tuple, Dict
-from loguru import logger
-import tempfile
 import os
+import tempfile
+
 import chardet
 import gradio as gr
-from src.llm import summarize_pt, classify_zero_shot_pt, DEFAULT_CATEGORIES
+import pandas as pd
+from loguru import logger
 
-def parse_labels(cats: Union[str, List[str], None]):
+from src.llm import DEFAULT_CATEGORIES, classify_zero_shot_pt, summarize_pt
+
+
+def parse_labels(cats: str | list[str] | None):
     """Converte uma entrada de categorias em uma lista de strings.
 
     Args:
@@ -23,9 +25,10 @@ def parse_labels(cats: Union[str, List[str], None]):
     # aceita string "A, B, C" ou lista/tupla
     if isinstance(cats, str):
         return [c.strip() for c in cats.replace(";", ",").split(",") if c.strip()]
-    if isinstance(cats, (list, tuple, set)):
+    if isinstance(cats | list | tuple | set):
         return [str(c).strip() for c in cats if str(c).strip()]
     return []
+
 
 def _read_csv_smart(file_path: str, sep: str = ";") -> pd.DataFrame:
     """Lê um CSV tentando detectar automaticamente a codificação.
@@ -58,10 +61,11 @@ def process_text_single(texto: str, categorias):
         Tuple[str, str, Dict[str, float]]: Tupla com (resumo, rótulo_predito, scores).
     """
     labels = parse_labels(categorias) or DEFAULT_CATEGORIES
-    
-    resumo = summarize_pt(texto)  
+
+    resumo = summarize_pt(texto)
     cls = classify_zero_shot_pt(texto, labels)
     return resumo, cls.get("label", ""), cls.get("scores", {})
+
 
 def process_csv(file, col_texto: str, categorias_texto: str = "", sep: str = ";"):
     """Processa um arquivo CSV aplicando resumo e classificação por linha.
@@ -93,13 +97,15 @@ def process_csv(file, col_texto: str, categorias_texto: str = "", sep: str = ";"
         df = _read_csv_smart(file_path, sep=sep)
 
         if col_texto not in df.columns:
-            raise ValueError(f"Coluna '{col_texto}' não encontrada. Colunas disponíveis: {list(df.columns)}")
+            raise ValueError(
+                f"Coluna '{col_texto}' não encontrada. Colunas disponíveis: {list(df.columns)}"
+            )
 
         labels = parse_labels(categorias_texto) or DEFAULT_CATEGORIES
 
         textos = df[col_texto].astype(str).fillna("").tolist()
 
-        resumos = [summarize_pt(t) for t in textos]  
+        resumos = [summarize_pt(t) for t in textos]
         categorias = [classify_zero_shot_pt(t, labels).get("label", "") for t in textos]
 
         out_df = df.copy()
@@ -115,4 +121,4 @@ def process_csv(file, col_texto: str, categorias_texto: str = "", sep: str = ";"
 
     except Exception as e:
         logger.exception(e)
-        raise gr.Error(f"Erro ao processar CSV: {e}")
+        raise gr.Error(f"Erro ao processar CSV: {e}") from e

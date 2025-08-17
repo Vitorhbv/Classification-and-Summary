@@ -4,13 +4,13 @@ Contém helpers leves, fallbacks e wrappers para pipelines do HuggingFace
 (usando transformers.pipeline quando disponível).
 """
 
-from .summarization import summarize_pt, get_summarizer
-from .classification import classify_zero_shot_pt, get_zero_shot, DEFAULT_CATEGORIES
+from .classification import DEFAULT_CATEGORIES, classify_zero_shot_pt, get_zero_shot
+from .summarization import get_summarizer, summarize_pt
 
 __all__ = [
-    "summarize_pt",
-    "get_summarizer",
-    "classify_zero_shot_pt",
-    "get_zero_shot",
     "DEFAULT_CATEGORIES",
+    "classify_zero_shot_pt",
+    "get_summarizer",
+    "get_zero_shot",
+    "summarize_pt",
 ]

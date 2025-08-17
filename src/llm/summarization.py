@@ -1,6 +1,7 @@
 """Funções e pipelines de sumarização."""
 
 import re
+
 from .base import logger, pipeline
 
 SUMMARIZATION_MODEL = "HuggingFaceTB/SmolLM3-3B"
@@ -8,6 +9,7 @@ SHORT_WORDS_THRESHOLD = 6  # textos curtos usam resumo rule-based
 device = -1  # CPU; mude para 0 se tiver GPU
 
 _SUMMARY = None
+
 
 def _postprocess_summary(raw: str, max_sentences: int) -> str:
     """
@@ -101,6 +103,7 @@ def _fallback_summary(text: str, max_sentences: int = 3) -> str:
         resumo += " ..."
     return f"(Resumo automático simples) {resumo}"
 
+
 def get_summarizer():
     """
     Inicializa (ou retorna em cache) o pipeline de geração de texto para sumarização.
@@ -135,7 +138,8 @@ def get_summarizer():
         logger.error(f"Falha carregando summarizer '{SUMMARIZATION_MODEL}': {e}")
         _SUMMARY = "FALLBACK"
         return _SUMMARY
-    
+
+
 def summarize_pt(text: str, max_sentences: int = 3) -> str:
     """
     Gera um resumo em português (PT-BR) para o texto fornecido.
@@ -157,7 +161,7 @@ def summarize_pt(text: str, max_sentences: int = 3) -> str:
     if not text:
         return ""
 
-    #textos muito curtos: regra determinística (evita saídas vazias/eco)
+    # textos muito curtos: regra determinística (evita saídas vazias/eco)
     n_words = len(re.findall(r"\w+", text, flags=re.UNICODE))
     if n_words <= SHORT_WORDS_THRESHOLD:
         return _rb_summary_pt(text)
@@ -179,9 +183,9 @@ Saída:
 
         out = summ(
             prompt,
-            max_new_tokens=80,        # 2-3 frases
+            max_new_tokens=80,  # 2-3 frases
             do_sample=False,
-            num_beams=2,              # beams altos tendem a repetir
+            num_beams=2,  # beams altos tendem a repetir
             temperature=0.0,
             repetition_penalty=1.25,
             no_repeat_ngram_size=3,
@@ -191,7 +195,7 @@ Saída:
             early_stopping=True,
         )[0]["generated_text"].strip()
 
-        return _postprocess_summary(out, max_sentences=max_sentences)	
+        return _postprocess_summary(out, max_sentences=max_sentences)
 
     except Exception as e:
         logger.error(f"Erro no summarizer (SmolLM3): {e}")
