@@ -40,8 +40,10 @@ Limitações — LLMs open‑source pequenos / CPU
   - Permitir customização de categorias para melhorar sinal sem retraining.
   - Recomendação: para alta precisão, usar modelos maiores via API (LLMs robustas de providers como Openai ou Gemini) ou finetuning no domínio(requer mais poder computacional).
 
+
 Rodar local 
-1. Crie e ative ambiente virtual:
+
+1. Após clonar o repositório, crie e ative ambiente virtual:
 
 WSL / Linux / macOS:
 ```
@@ -78,19 +80,32 @@ docker run --rm -it --name blip-triagem -p 7860:7860 blip-triagem:latest
 Arquitetura (diagrama simplificado)
 
 ```
-Browser (user)
-   |
-   +--> Gradio UI (porta 7860)
-           |
-           +--> Handlers:
-                   - Texto único -> summarize_pt + classify_zero_shot_pt
-                   - CSV batch  -> pandas read -> loop por linha -> summarize + classify -> save CSV com colunas extras
-           |
-           +--> src.llm:
-                   - Usa transformers pipeline (se disponível) para inferência
-                   - Caso contrário, usa fallback heurístico
-           |
-           +--> Armazenamento temporário: arquivo CSV de saída (resumo, categoria_llm)
+Browser (usuário)
+  |
+  +-> Gradio UI (app.py)  [http://localhost:7860]
+        |
+        +-> Handlers (app.py)
+        |     - Texto único -> src.utils.csv_tools.process_text_single()
+        |         -> src.llm.summarize_pt() + src.llm.classify_zero_shot_pt()
+        |     - CSV batch  -> src.utils.csv_tools.process_csv()
+        |         -> pandas lê .csv -> itera linhas -> chama summarize + classify
+        |
+        +-> Lógica de LLM (src/llm/)
+        |     - summarization.py (summarize_pt, get_summarizer)
+        |     - classification.py (classify_zero_shot_pt, get_zero_shot)
+        |     - base.py (wrapper do pipeline; usa transformers se disponível)
+        |
+        +-> Utils (src/utils/)
+        |     - csv_tools.py (leitura inteligente, parse de labels, processamento batch)
+        |
+        +-> Dados e I/O
+              - datasets/ (exemplos CSV para testes)
+              - Saída: arquivo CSV gerado em diretório temporário (tickets_processados.csv)
+              - Logs: console (loguru)
+
+Execução/empacotamento
+- Dockerfile cria imagem e expõe porta 7860
+- requirements.txt / pyproject.toml definem dependências
 ```
 
 Recomendações 
@@ -98,10 +113,13 @@ Recomendações
 - Se precisar de maior qualidade, usar modelos maiores/finetuned e GPU para reduzir latência.
 
 Notas finais
-
 - O projeto foi desenhado como um MVP: barato, rodável em CPU e fácil de demonstrar.
    Para produção, é recomendado:
+   
       - Observabilidade (latência, taxa de fallback, distribuição de rótulos).
+
       - Avaliação com amostras reais e ground truth.
+      
       - LLM robusto com mais de 70B de parâmetros, usar RAG se tiver base de conhecimento contendo exemplos de chamados rotulados.
+
       - Hospedar na nuvem com GPU e autoscaling (endpoint gerenciado).
