@@ -104,8 +104,7 @@ def process_csv(file, col_texto: str, categorias_texto: str = "", sep: str = ";"
 
         textos = df[col_texto].astype(str).fillna("").tolist()
 
-        # processamento em lote (simples); se quiser, pode fazer cache ou batch
-        resumos = [summarize_pt(t) for t in textos]  # 1 frase
+        resumos = [summarize_pt(t) for t in textos]  
         categorias = [classify_zero_shot_pt(t, labels).get("label", "") for t in textos]
 
         out_df = df.copy()
@@ -122,8 +121,6 @@ def process_csv(file, col_texto: str, categorias_texto: str = "", sep: str = ";"
     except Exception as e:
         logger.exception(e)
         raise gr.Error(f"Erro ao processar CSV: {e}")
-        return pd.DataFrame(), None
-
 
 # ---------- UI ----------
 with gr.Blocks(title="Triagem Inteligente — MVP (LLM Open-Source)") as demo:
