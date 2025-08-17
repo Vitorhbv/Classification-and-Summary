@@ -1,6 +1,6 @@
 pandas==2.3.1
 gradio==5.42.0
-transformers
+transformers>=4.55.0
 accelerate
 torch
 sentencepiece
