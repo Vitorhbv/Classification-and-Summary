@@ -91,7 +91,7 @@ Browser (user)
            +--> Armazenamento temporário: arquivo CSV de saída (resumo, categoria_llm)
 ```
 
-Recomendações rápidas
+Recomendações 
 - Para produção, fixar versões das dependências (requirements com ==) e usar variáveis de ambiente em vez de hardcoding.
 - Se precisar de maior qualidade, usar modelos maiores/finetuned e GPU para reduzir latência.
 
@@ -99,7 +99,7 @@ Notas finais
 
 - O projeto foi desenhado como um MVP: barato, rodável em CPU e fácil de demonstrar.
    Para produção, é recomendado:
-      Observabilidade (latência, taxa de fallback, distribuição de rótulos).
-      Avaliação com amostras reais e ground truth.
-      LLM robusto com mais de 70B de parâmetros, usar RAG se tiver base de conhecimento contendo exemplos de chamados rotulados.
-      Hospedar na nuvem com GPU e autoscaling (endpoint gerenciado).
+      - Observabilidade (latência, taxa de fallback, distribuição de rótulos).
+      - Avaliação com amostras reais e ground truth.
+      - LLM robusto com mais de 70B de parâmetros, usar RAG se tiver base de conhecimento contendo exemplos de chamados rotulados.
+      - Hospedar na nuvem com GPU e autoscaling (endpoint gerenciado).
