@@ -1,14 +1,23 @@
+"""Utilities de LLM para sumarização e classificação (PT-BR).
+
+Contém helpers leves, fallbacks e wrappers para pipelines do HuggingFace
+(usando transformers.pipeline quando disponível).
+"""
+
 from typing import List, Dict
 from loguru import logger
 import re
 
-# ---------- Constantes e Modelos ----------
+# Constantes hardcoded
+# (pode ser melhor usar um arquivo de configuração ou variáveis de ambiente)
+# mas para o MVP é mais suficiente.
+
 SUMMARIZATION_MODEL = "HuggingFaceTB/SmolLM3-3B"
 ZERO_SHOT_MODEL = "joeddav/xlm-roberta-large-xnli"
 SHORT_WORDS_THRESHOLD = 6 # textos curtos usam resumo rule-based
 device= -1 # CPU; mude para 0 se tiver GPU
 
-# ---------- Tentativa de carregar transformers ----------
+# Carregar transformers
 try:
     from transformers import pipeline
 except Exception as e:
@@ -29,7 +38,17 @@ _ZS = None
 # ---------- Helpers ----------
 def _postprocess_summary(raw: str, max_sentences: int) -> str:
     """
-    Limpa prefixos (ex.: 'Resumo:'), remove duplicatas e limita a N frases.
+    Limpa e normaliza o texto gerado pelo modelo de sumarização.
+
+    Remove prefixos comuns (ex.: 'Resumo:'), divide em sentenças, elimina
+    duplicatas e limita a saída ao número máximo de sentenças indicado.
+
+    Args:
+        raw: Texto bruto retornado pelo gerador.
+        max_sentences: Máximo de sentenças desejadas na saída.
+
+    Returns:
+        Uma string com até `max_sentences` sentenças pós-processadas.
     """
     if not raw:
         return ""
@@ -62,7 +81,18 @@ def _postprocess_summary(raw: str, max_sentences: int) -> str:
     return " ".join(out) + (" ..." if len(sents) > max_sentences else "")
 
 def _rb_summary_pt(text: str) -> str:
-    """Resumo determinístico para frases muito curtas (3ª pessoa)."""
+    """
+    Resumo determinístico para textos curtos em português.
+
+    Aplica regras simples para transformar solicitações diretas em uma
+    frase no estilo "Solicita ..." e garante pontuação adequada.
+
+    Args:
+        text: Texto de entrada.
+
+    Returns:
+        Resumo curto em terceira pessoa (string).
+    """
     t = (text or "").strip().rstrip(".")
     m = re.match(r"^\s*(solicito|gostaria de|quero|preciso)\s+(.*)$", t, flags=re.IGNORECASE)
     if m:
@@ -74,6 +104,19 @@ def _rb_summary_pt(text: str) -> str:
     return t
 
 def _fallback_summary(text: str, max_sentences: int = 3) -> str:
+    """
+    Estratégia de fallback para sumarização quando não houver modelo.
+
+    Simplesmente retorna as primeiras sentenças do texto de entrada,
+    prefixadas para indicar que é um resumo automático simples.
+
+    Args:
+        text: Texto de entrada.
+        max_sentences: Número máximo de sentenças a incluir.
+
+    Returns:
+        String com resumo simples.
+    """
     text = (text or "").strip()
     if not text:
         return ""
@@ -84,6 +127,20 @@ def _fallback_summary(text: str, max_sentences: int = 3) -> str:
     return f"(Resumo automático simples) {resumo}"
 
 def _fallback_classify(text: str, labels: List[str]) -> Dict[str, float]:
+    """
+    Classificador heurístico de fallback (rules-based) para cenários sem modelo.
+
+    Usa palavras-chave para atribuir pontuações simples às categorias
+    fornecidas e retorna a melhor categoria encontrada.
+
+    Args:
+        text: Texto a ser classificado.
+        labels: Lista de rótulos candidatos.
+
+    Returns:
+        Dicionário com a chave 'label' (melhor rótulo) e 'scores' mapeando
+        cada rótulo para sua pontuação (float).
+    """
     text_l = (text or "").lower()
     labels = labels or DEFAULT_CATEGORIES
     rules = {
@@ -107,8 +164,12 @@ def _fallback_classify(text: str, labels: List[str]) -> Dict[str, float]:
 # ---------- Pipelines ----------
 def get_summarizer():
     """
-    Qwen2-1.5B-Instruct via text-generation.
-    CPU por padrão (device=-1). Se tiver GPU, mude para 0.
+    Inicializa (ou retorna em cache) o pipeline de geração de texto para sumarização.
+
+    Quando transformers não estiver disponível, retorna o marcador de fallback.
+
+    Returns:
+        Pipeline do transformers ou a string "FALLBACK" em caso de indisponibilidade.
     """
     global _SUMMARY
     if _SUMMARY is not None:
@@ -135,8 +196,16 @@ def get_summarizer():
         logger.error(f"Falha carregando summarizer '{SUMMARIZATION_MODEL}': {e}")
         _SUMMARY = "FALLBACK"
         return _SUMMARY
-def get_zero_shot():
 
+def get_zero_shot():
+    """
+    Inicializa (ou retorna em cache) o pipeline de zero-shot-classification.
+
+    Quando transformers não estiver disponível, retorna o marcador de fallback.
+
+    Returns:
+        Pipeline do transformers ou a string "FALLBACK" em caso de indisponibilidade.
+    """
     global _ZS
     if _ZS is not None:
         return _ZS
@@ -158,12 +227,22 @@ def get_zero_shot():
         _ZS = "FALLBACK"
         return _ZS
 
-
-# ---------- APIs públicas ----------
 def summarize_pt(text: str, max_sentences: int = 3) -> str:
     """
-    Resumo com flan-T5-large (text-summarization), com regra para textos curtos
-    e pós-processamento.
+    Gera um resumo em português (PT-BR) para o texto fornecido.
+
+    Estratégia:
+      - Se o texto for muito curto, aplica uma regra determinística.
+      - Se houver um pipeline de model disponível, usa-o com prompt em PT-BR
+        e pós-processa a saída.
+      - Caso contrário, usa um resumo de fallback baseado em sentenças.
+
+    Args:
+        text: Texto a ser resumido.
+        max_sentences: Número máximo de sentenças desejadas no resumo.
+
+    Returns:
+        Resumo do texto como string. Pode retornar string vazia se `text` for vazio.
     """
     text = (text or "").strip()
     if not text:
@@ -200,15 +279,30 @@ Saída:
             return_full_text=False,
             pad_token_id=summ.tokenizer.eos_token_id,
             eos_token_id=summ.tokenizer.eos_token_id,
+            early_stopping=True,
         )[0]["generated_text"].strip()
 
-        return _postprocess_summary(out, max_sentences=1)
+        return _postprocess_summary(out, max_sentences=max_sentences)	
 
     except Exception as e:
         logger.error(f"Erro no summarizer (SmolLM3): {e}")
         return _fallback_summary(text, max_sentences=3)
 
 def classify_zero_shot_pt(text: str, labels: List[str] = None) -> Dict[str, float]:
+    """
+    Classifica o texto em rótulos fornecidos usando zero-shot ou fallback.
+
+    Tenta usar o pipeline de zero-shot; se indisponível, usa um classificador
+    heurístico simples.
+
+    Args:
+        text: Texto a ser classificado.
+        labels: Lista de rótulos candidatos. Se None, usa DEFAULT_CATEGORIES.
+
+    Returns:
+        Dicionário contendo ao menos as chaves 'label' (o rótulo escolhido)
+        e 'scores' (mapeamento rótulo->score).
+    """
     text = (text or "").strip()
     labels = [l for l in (labels or DEFAULT_CATEGORIES) if l]
     if not text or not labels:

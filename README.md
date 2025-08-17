@@ -1,27 +1,105 @@
+# Triagem Inteligente - Blip
 
-# Triagem Inteligente (Gradio) — Versão Resiliente
-- **Resumo**: `flan-t5-small` (CPU), com fallback local se o download falhar
-- **Classificação zero-shot**: `xlm-roberta-large-xnli` (CPU), com fallback por regras se falhar
-- **UI**: Gradio (texto único + CSV em lote)
+Aplicação simples para resumir e classificar mensagens de chamados em português (PT‑BR).
+A proposta é oferecer uma interface que utiliza LLMs open‑source quando disponíveis
+e heurísticas de fallback quando não for possível baixar ou executar os modelos.
 
-## Rodar local
+Principais tecnologias
+- Gradio: UI web leve para inputs/outputs interativos (texto único e upload de CSV).
+- Transformers / Hugging Face: pipelines opcionais para sumarização e classificação (zero‑shot).
+- Pandas: leitura e escrita de CSV, manipulação de dados em batch.
+- Docker: empacotamento da aplicação para execução isolada.
+- Loguru: logging.
+
+Como funciona (fluxo)
+1. Usuário fornece input via interface Gradio (web):
+   - Texto único: campo livre com a mensagem do chamado (ex.: reclamação, suporte, feedback).
+   - CSV em batch: upload de arquivo; o usuário informa a coluna que contém a descrição/mensagem.
+2. Backend processa cada texto chamando dois passos:
+   - summarize_pt(text) → gera um resumo curto (modelo HF ou fallback heurístico).
+   - classify_zero_shot_pt(text, labels) → rótulo + scores (modelo zero‑shot ou fallback).
+3. Resultados são exibidos na UI; no caso do CSV, um arquivo processado é salvo e retornado com duas colunas adicionais:
+   - resumo: texto gerado pelo LLM (ou fallback)
+   - categoria_llm: rótulo predito pelo LLM (ou fallback)
+
+Inputs e categorias
+- Categorias padrão: existem categorias pré‑definidas no sistema (por exemplo: Feedback, Reclamação, Suporte técnico, Dúvida, Solicitação de serviço).
+- Categorias customizadas: o usuário pode adicionar manualmente outras categorias pela interface (campo de texto separadas por vírgula).
+- CSV batch: ao subir um CSV, selecione a coluna que contém a mensagem/descrição — o LLM fará o resumo e a classificação baseado no conteúdo dessa coluna.
+
+Limitações — LLMs open‑source pequenos / CPU
+- Modelos com poucos parâmetros ou executados apenas em CPU têm limitações claras:
+  - Imprecisão: podem perder contexto, omitir detalhes importantes ou produzir resumos genéricos que não refletem nuances do chamado.
+  - Classificação fraca em casos sutis: zero‑shot sem fine‑tuning(não tenho gpu) tende a confundir categorias próximas.
+  - Latência: inferência em CPU é mais lenta, especialmente em batch grande.
+  - Determinismo / estabilidade: geração pode variar; erros ocasionais são esperados.
+- Mitigações neste projeto:
+  - Fallback heurístico (rules‑based) para não interromper o fluxo quando modelos não estão disponíveis.
+  - Permitir customização de categorias para melhorar sinal sem retraining.
+  - Recomendação: para alta precisão, usar modelos maiores via API (LLMs robustas de providers como Openai ou Gemini) ou finetuning no domínio(requer mais poder computacional).
+
+Rodar local 
+1. Crie e ative ambiente virtual:
+
+WSL / Linux / macOS:
 ```
-python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
-python app_gradio.py
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-Se tiver problema com `torch`, use (CPU):
+2. Instale dependências:
+```
+pip install --upgrade pip
+pip install -r requirements.txt ou pip install -e .
+```
+Se houver problemas com torch na CPU:
 ```
 pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision torchaudio
 ```
 
-## Docker
+3. Inicie a aplicação:
 ```
-docker build -t triagem-gradio:cpu .
-docker run -p 7860:7860 triagem-gradio:cpu
+python app.py
+```
+Acesse: http://localhost:7860
+
+Executar com Docker
+1. Build da imagem:
+```
+docker build -t blip-triagem:latest .
+```
+2. Executar container:
+```
+docker run --rm -it --name blip-triagem -p 7860:7860 blip-triagem:latest
 ```
 
-## Notas
-- Sem internet para baixar os modelos? O app **não quebra**: usa heurísticas simples como fallback.
-- Informe a coluna de texto no CSV (ex.: `descricao`).
+Arquitetura (diagrama simplificado)
+
+```
+Browser (user)
+   |
+   +--> Gradio UI (porta 7860)
+           |
+           +--> Handlers:
+                   - Texto único -> summarize_pt + classify_zero_shot_pt
+                   - CSV batch  -> pandas read -> loop por linha -> summarize + classify -> save CSV com colunas extras
+           |
+           +--> src.llm:
+                   - Usa transformers pipeline (se disponível) para inferência
+                   - Caso contrário, usa fallback heurístico
+           |
+           +--> Armazenamento temporário: arquivo CSV de saída (resumo, categoria_llm)
+```
+
+Recomendações rápidas
+- Para produção, fixar versões das dependências (requirements com ==) e usar variáveis de ambiente em vez de hardcoding.
+- Se precisar de maior qualidade, usar modelos maiores/finetuned e GPU para reduzir latência.
+
+Notas finais
+
+- O projeto foi desenhado como um MVP: barato, rodável em CPU e fácil de demonstrar.
+   Para produção, é recomendado:
+      Observabilidade (latência, taxa de fallback, distribuição de rótulos).
+      Avaliação com amostras reais e ground truth.
+      LLM robusto com mais de 70B de parâmetros, usar RAG se tiver base de conhecimento contendo exemplos de chamados rotulados.
+      Hospedar na nuvem com GPU e autoscaling (endpoint gerenciado).

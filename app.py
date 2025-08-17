@@ -1,3 +1,9 @@
+"""App Gradio para Triagem Inteligente (PT-BR).
+
+Interface mínima para gerar resumos e classificar textos de chamados
+(usando src.llm). Suporta entrada de texto único e processamento em lote
+via CSV. Fornece fallbacks locais quando os modelos não estão disponíveis.
+"""
 import gradio as gr
 import pandas as pd
 from typing import List, Union
@@ -5,10 +11,20 @@ from loguru import logger
 from src.llm import summarize_pt, classify_zero_shot_pt, DEFAULT_CATEGORIES
 import tempfile
 import os
-import chardet  # opcional: se não tiver, remova e use encoding padrão
+import chardet 
 
 # ---------- Utils ----------
 def parse_labels(cats: Union[str, List[str], None]):
+    """Converte uma entrada de categorias em uma lista de strings.
+
+    Args:
+        cats (Union[str, List[str], None]): String com categorias separadas por
+            vírgula ou ponto-e-vírgula, ou iterável de strings (list/tuple/set).
+
+    Returns:
+        List[str]: Lista de categorias limpas; retorna lista vazia se `cats` for
+        None ou inválido.
+    """
     # aceita string "A, B, C" ou lista/tupla
     if isinstance(cats, str):
         return [c.strip() for c in cats.replace(";", ",").split(",") if c.strip()]
@@ -17,7 +33,15 @@ def parse_labels(cats: Union[str, List[str], None]):
     return []
 
 def _read_csv_smart(file_path: str, sep: str = ";") -> pd.DataFrame:
-    """Tenta detectar encoding e lê CSV com separador informado."""
+    """Lê um CSV tentando detectar automaticamente a codificação.
+
+    Args:
+        file_path (str): Caminho para o arquivo CSV.
+        sep (str): Separador de colunas (padrão ';').
+
+    Returns:
+        pandas.DataFrame: DataFrame lido a partir do CSV.
+    """
     try:
         with open(file_path, "rb") as f:
             raw = f.read(4096)
@@ -27,18 +51,43 @@ def _read_csv_smart(file_path: str, sep: str = ";") -> pd.DataFrame:
     return pd.read_csv(file_path, sep=sep or ";", encoding=enc)
 
 
-# ---------- Handlers ----------
 def process_text_single(texto: str, categorias):
+    """Processa um texto único: gera resumo e realiza classificação.
+
+    Args:
+        texto (str): Texto do chamado a ser processado.
+        categorias (Union[str, List[str], None]): Categorias a serem usadas para
+            classificação (string separada por vírgula ou iterável).
+
+    Returns:
+        Tuple[str, str, Dict[str, float]]: Tupla com (resumo, rótulo_predito, scores).
+    """
     labels = parse_labels(categorias) or DEFAULT_CATEGORIES
-    # resumo de 1 frase (altere para 3 se quiser)
-    resumo = summarize_pt(texto)  # sua summarize_pt já garante 1 frase se você trocou; senão use summarize_pt(texto, max_sentences=1)
+    
+    resumo = summarize_pt(texto)  
     cls = classify_zero_shot_pt(texto, labels)
     return resumo, cls.get("label", ""), cls.get("scores", {})
 
 def process_csv(file, col_texto: str, categorias_texto: str = "", sep: str = ";"):
-    """
-    Lê o CSV enviado no Gradio, gera 'resumo' (1 frase) e 'categoria_llm',
-    salva em diretório temporário e retorna (prévia_dataframe, caminho_arquivo).
+    """Processa um arquivo CSV aplicando resumo e classificação por linha.
+
+    Lê o CSV fornecido (detectando codificação), aplica summarize_pt e
+    classify_zero_shot_pt na coluna indicada e salva um CSV com as colunas
+    adicionais 'resumo' e 'categoria_llm' em um diretório temporário.
+
+    Args:
+        file: Objeto de arquivo ou caminho fornecido pelo componente Gradio.
+        col_texto (str): Nome da coluna no CSV que contém o texto a ser processado.
+        categorias_texto (str): Categorias em formato string separadas por vírgula
+            (opcional). Se vazio, usa DEFAULT_CATEGORIES.
+        sep (str): Separador do CSV (padrão ';').
+
+    Returns:
+        Tuple[pandas.DataFrame, str]: Prévia (até 15 linhas) do DataFrame de saída
+        e o caminho absoluto do CSV processado salvo em diretório temporário.
+
+    Raises:
+        gr.Error: Se ocorrer qualquer erro durante a leitura ou processamento do CSV.
     """
     try:
         # Gradio pode entregar str (path) ou objeto/tmpfile; lidamos com ambos
@@ -90,7 +139,7 @@ with gr.Blocks(title="Triagem Inteligente — MVP (LLM Open-Source)") as demo:
         out_scores = gr.JSON(label="Scores por categoria")
         btn.click(process_text_single, inputs=[inp_text, inp_cats], outputs=[out_resumo, out_label, out_scores])
 
-    with gr.Tab("CSV em Lote"):
+    with gr.Tab("CSV em Batch"):
         gr.Markdown("Informe a **coluna de texto** do chamado (ex.: `descricao`).")
         up = gr.File(label="CSV de entrada")
         col = gr.Textbox(label="Coluna de texto do chamado", placeholder="Ex.: descricao")
