@@ -4,25 +4,37 @@ Interface mínima para gerar resumos e classificar textos de chamados
 (usando src.llm). Suporta entrada de texto único e processamento em lote
 via CSV. Fornece fallbacks locais quando os modelos não estão disponíveis.
 """
+
 import gradio as gr
+
 from src.llm import DEFAULT_CATEGORIES
-from src.utils.csv_tools import (
-    process_text_single,
-    process_csv
-)
+from src.utils.csv_tools import process_csv, process_text_single
 
 with gr.Blocks(title="Triagem Inteligente — MVP (LLM Open-Source)") as demo:
     gr.Markdown("# Triagem Inteligente — Resumo + Classificação (LLM Open-Source)")
-    gr.Markdown("Se os modelos não puderem ser baixados, o app **usa fallback local** (regras simples) para não quebrar.")
+    gr.Markdown(
+        "Se os modelos não puderem ser baixados, o app usa fallback local."
+    )
 
     with gr.Tab("Texto Único"):
-        inp_text = gr.Textbox(label="Descrição do chamado (texto livre)", lines=8, placeholder="Cole aqui a descrição do chamado...")
-        inp_cats = gr.Textbox(label="Categorias (separadas por vírgula)", value=", ".join(DEFAULT_CATEGORIES))
+        inp_text = gr.Textbox(
+            label="Descrição do chamado (texto livre)",
+            lines=8,
+            placeholder="Cole aqui a descrição do chamado...",
+        )
+        inp_cats = gr.Textbox(
+            label="Categorias (separadas por vírgula)",
+            value=", ".join(DEFAULT_CATEGORIES),
+        )
         btn = gr.Button("Processar")
         out_resumo = gr.Textbox(label="Resumo")
         out_label = gr.Textbox(label="Categoria prevista")
         out_scores = gr.JSON(label="Scores por categoria")
-        btn.click(process_text_single, inputs=[inp_text, inp_cats], outputs=[out_resumo, out_label, out_scores])
+        btn.click(
+            process_text_single,
+            inputs=[inp_text, inp_cats],
+            outputs=[out_resumo, out_label, out_scores],
+        )
 
     with gr.Tab("CSV em Batch"):
         gr.Markdown("Informe a **coluna de texto** do chamado (ex.: `descricao`).")

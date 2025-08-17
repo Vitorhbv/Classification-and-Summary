@@ -1,7 +1,5 @@
 """Funções e pipelines de classificação."""
 
-from typing import List, Dict
-import re
 from .base import logger, pipeline
 
 ZERO_SHOT_MODEL = "joeddav/xlm-roberta-large-xnli"
@@ -16,7 +14,7 @@ DEFAULT_CATEGORIES = [
 _ZS = None
 
 
-def _fallback_classify(text: str, labels: List[str]) -> Dict[str, float]:
+def _fallback_classify(text: str, labels: list[str]) -> dict[str, float]:
     """
     Classificador heurístico de fallback (rules-based) para cenários sem modelo.
 
@@ -35,9 +33,22 @@ def _fallback_classify(text: str, labels: List[str]) -> Dict[str, float]:
     labels = labels or DEFAULT_CATEGORIES
     rules = {
         "Reclamação": ["erro", "não funciona", "demora", "reclama"],
-        "Suporte técnico": ["bug", "instalar", "acesso", "senha", "configurar", "técnico"],
+        "Suporte técnico": [
+            "bug",
+            "instalar",
+            "acesso",
+            "senha",
+            "configurar",
+            "técnico",
+        ],
         "Dúvida": ["como", "onde", "posso", "duvida", "dúvida"],
-        "Solicitação de serviço": ["pedido", "solicito", "provisionar", "ativar", "criar"],
+        "Solicitação de serviço": [
+            "pedido",
+            "solicito",
+            "provisionar",
+            "ativar",
+            "criar",
+        ],
         "Feedback": ["sugestão", "gostei", "melhorar", "ideia"],
     }
     scores = {lbl: 0.01 for lbl in labels}
@@ -82,7 +93,7 @@ def get_zero_shot():
         return _ZS
 
 
-def classify_zero_shot_pt(text: str, labels: List[str] = None) -> Dict[str, float]:
+def classify_zero_shot_pt(text: str, labels: list[str] | None = None) -> dict[str, float]:
     """
     Classifica o texto em rótulos fornecidos usando zero-shot ou fallback.
 
@@ -98,7 +109,7 @@ def classify_zero_shot_pt(text: str, labels: List[str] = None) -> Dict[str, floa
         e 'scores' (mapeamento rótulo->score).
     """
     text = (text or "").strip()
-    labels = [l for l in (labels or DEFAULT_CATEGORIES) if l]
+    labels = [lbl for lbl in (labels or DEFAULT_CATEGORIES) if lbl]
     if not text or not labels:
         return {"label": "", "scores": {}}
 
@@ -113,7 +124,9 @@ def classify_zero_shot_pt(text: str, labels: List[str] = None) -> Dict[str, floa
             hypothesis_template="This text is about {}.",  # geralmente mais estável
         )
         best = {"label": out["labels"][0], "score": float(out["scores"][0])}
-        best["scores"] = {lbl: float(sc) for lbl, sc in zip(out["labels"], out["scores"])}
+        best["scores"] = {
+            lbl: float(sc) for lbl, sc in zip(out["labels"], out["scores"], strict=False)
+        }
         return best
     except Exception as e:
         logger.error(f"Erro no zero-shot: {e}")

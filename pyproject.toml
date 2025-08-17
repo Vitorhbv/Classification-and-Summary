@@ -29,3 +29,18 @@ packages = ["src"]
 [build-system]
 requires = ["hatchling", "wheel", "hatch-requirements-txt"]
 build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = [
+  ".venv",
+  "venv",
+  "build",
+  "dist",
+  "__pycache__",
+  "datasets",  
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
