@@ -11,6 +11,10 @@ Principais tecnologias
 - Docker: empacotamento da aplicação para execução isolada.
 - Loguru: logging.
 
+Modelos utilizados
+- HuggingFaceTB/SmolLM3-3B : LLM simples de 3B de parâmetros usado para summarizar
+- joeddav/xlm-roberta-large-xnli: Multilingual LLM treinado para zero-shot classification.
+
 Como funciona (fluxo)
 1. Usuário fornece input via interface Gradio (web):
    - Texto único: campo livre com a mensagem do chamado (ex.: reclamação, suporte, feedback).
