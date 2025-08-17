@@ -83,8 +83,8 @@ Browser (user)
    +--> Gradio UI (porta 7860)
            |
            +--> Handlers:
-                   - Texto único -> summarize_pt + classify_zero_shot_pt
-                   - CSV batch  -> pandas read -> loop por linha -> summarize + classify -> save CSV com colunas extras
+                   - Texto único -> process_text_single (src.utils.csv_tools)
+                   - CSV batch  -> process_csv (src.utils.csv_tools) -> salva CSV com colunas extras
            |
            +--> src.llm:
                    - Usa transformers pipeline (se disponível) para inferência
@@ -98,10 +98,12 @@ Recomendações
 - Se precisar de maior qualidade, usar modelos maiores/finetuned e GPU para reduzir latência.
 
 Notas finais
-
 - O projeto foi desenhado como um MVP: barato, rodável em CPU e fácil de demonstrar.
    Para produção, é recomendado:
       - Observabilidade (latência, taxa de fallback, distribuição de rótulos).
+
       - Avaliação com amostras reais e ground truth.
+      
       - LLM robusto com mais de 70B de parâmetros, usar RAG se tiver base de conhecimento contendo exemplos de chamados rotulados.
+
       - Hospedar na nuvem com GPU e autoscaling (endpoint gerenciado).
