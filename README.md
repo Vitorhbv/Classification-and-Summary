@@ -27,6 +27,8 @@ Inputs e categorias
 - Categorias customizadas: o usuário pode adicionar manualmente outras categorias pela interface (campo de texto separadas por vírgula).
 - CSV batch: ao subir um CSV, selecione a coluna que contém a mensagem/descrição — o LLM fará o resumo e a classificação baseado no conteúdo dessa coluna.
 
+Nota: existe uma pasta `datasets/` no repositório contendo arquivos CSV de exemplo (por exemplo `exemplos_chamados.csv` e `exemplos_chamados_longos.csv`) que podem e foram usados como input de teste para o fluxo de CSV em lote.
+
 Limitações — LLMs open‑source pequenos / CPU
 - Modelos com poucos parâmetros ou executados apenas em CPU têm limitações claras:
   - Imprecisão: podem perder contexto, omitir detalhes importantes ou produzir resumos genéricos que não refletem nuances do chamado.
