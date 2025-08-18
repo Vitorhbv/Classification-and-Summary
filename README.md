@@ -116,6 +116,12 @@ Recomendações
 - Para produção, fixar versões das dependências (requirements com ==) e usar variáveis de ambiente em vez de hardcoding.
 - Se precisar de maior qualidade, usar modelos maiores/finetuned e GPU para reduzir latência.
 
+Noções de Qualidade & CI (simples)
+[![lint](https://github.com/Vitorhbv/Triagem-Inteligente/actions/workflows/lint.yml/badge.svg)](../../actions/workflows/lint.yml)
+
+- **CI (GitHub Actions):** roda **Ruff** a cada *push*/PR (branches `main`/`feat/**`).
+- Objetivo: manter o código consistente e evitar *lint issues* antes de merge.
+
 Notas finais
 - O projeto foi desenhado como um MVP: barato, rodável em CPU e fácil de demonstrar.
    Para produção, é recomendado:
