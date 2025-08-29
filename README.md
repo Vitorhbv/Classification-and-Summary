@@ -1,4 +1,4 @@
-# Triagem Inteligente - Blip
+# Triagem Inteligente 
 
 Aplicação simples para resumir e classificar mensagens de chamados em português (PT‑BR).
 A proposta é oferecer uma interface que utiliza LLMs open‑source quando disponíveis
